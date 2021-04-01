@@ -17,7 +17,7 @@ std::unique_ptr<ExpressionToken> ExpressionToken::parse(const std::string &s) {
 }
 
 std::unique_ptr<ExpressionToken> ExpressionToken::parse(const std::string &s, bool inParenthesis, int &i) {
-    ExpressionToken *ret = new ExpressionToken();
+    std::unique_ptr<ExpressionToken> ret = std::unique_ptr<ExpressionToken>(new ExpressionToken());
 
     int start = i;
 
@@ -64,7 +64,7 @@ std::unique_ptr<ExpressionToken> ExpressionToken::parse(const std::string &s, bo
         case ')':
             if (inParenthesis) {
                 ++i;
-                return std::unique_ptr<ExpressionToken>(ret);
+                return std::move(ret);
             } else {
                 throw ParseException("Unmatched closing parenthesis.", i);
             }
@@ -80,7 +80,7 @@ std::unique_ptr<ExpressionToken> ExpressionToken::parse(const std::string &s, bo
         }
     }
     if (!inParenthesis) {
-        return std::unique_ptr<ExpressionToken>(ret);
+        return std::move(ret);
     } else {
         throw ParseException("Could not find closing parenthesis.", start - 1);
     }
