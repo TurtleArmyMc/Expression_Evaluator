@@ -17,7 +17,8 @@ int main(int argc, char *argv[]) {
             try {
                 std::unique_ptr<ExpressionToken> userExpression = ExpressionToken::parse(userString);
                 std::cout << userExpression->toString() << '\n';
-                std::cout << "Answer: " << userExpression->evaluate()->toString() << "\n\n";
+                std::unique_ptr<ConstantToken> answer = userExpression->evaluate();
+                std::cout << "Answer: " << answer->toString() << "\n\n";
             } catch (const ParseException &e) {
                 for (int i = 0; i < e.getCharNumber(); i++) {
                     std::cout << ' ';

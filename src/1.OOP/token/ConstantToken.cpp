@@ -24,6 +24,8 @@ std::unique_ptr<ConstantToken> ConstantToken::parse(const std::string &s, int &i
 
 bool ConstantToken::canBeMultipliedByConstant() const { return false; }
 
+ConstantToken::ConstantToken() { value = 0; }
+
 ConstantToken::ConstantToken(long double d) { value = d; }
 
 long double ConstantToken::getValue() const { return value; }

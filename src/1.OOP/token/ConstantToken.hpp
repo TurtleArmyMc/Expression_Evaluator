@@ -4,17 +4,18 @@
 #include <memory>
 
 class ConstantToken : public IValuedToken {
-  private:
+  protected:
     long double value;
     static bool validChar(int c);
+    ConstantToken();
 
   public:
-    static std::unique_ptr<ConstantToken> parse(const std::string &, int &);
     ConstantToken(long double d);
-    long double getValue() const;
-    bool canBeMultipliedByConstant() const;
+    static std::unique_ptr<ConstantToken> parse(const std::string &, int &);
+    virtual long double getValue() const;
+    virtual bool canBeMultipliedByConstant() const override;
     virtual std::unique_ptr<IToken> clone() const override;
-    std::string toString() const;
+    virtual std::string toString() const override;
 
     std::unique_ptr<ConstantToken> add(const ConstantToken *) const;
     std::unique_ptr<ConstantToken> subtract(const ConstantToken *) const;

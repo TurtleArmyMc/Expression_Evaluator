@@ -1,13 +1,22 @@
 #include "ExpressionToken.hpp"
 #include "IEvaluatableToken.hpp"
 #include "ParseException.hpp"
+#include "PiConstantToken.hpp"
+#include "operator/ACosOperatorToken.hpp"
+#include "operator/ASinOperatorToken.hpp"
+#include "operator/ATanOperatorToken.hpp"
 #include "operator/AddOperatorToken.hpp"
+#include "operator/CosOperatorToken.hpp"
 #include "operator/DivideOperatorToken.hpp"
+#include "operator/IFunctionOperatorToken.hpp"
 #include "operator/IOperatorToken.hpp"
 #include "operator/ISignChangeToken.hpp"
 #include "operator/MultiplyOperatorToken.hpp"
 #include "operator/PowerOperatorToken.hpp"
+#include "operator/SinOperatorToken.hpp"
 #include "operator/SubtractOperatorToken.hpp"
+#include "operator/TanOperatorToken.hpp"
+#include <cstring>
 
 ExpressionToken::ExpressionToken() {}
 
@@ -69,12 +78,33 @@ std::unique_ptr<ExpressionToken> ExpressionToken::parse(const std::string &s, bo
                 throw ParseException("Unmatched closing parenthesis.", i);
             }
             break;
-
         default:
             if (std::isspace((s[i]))) {
                 ++i;
             } else {
-                throw ParseException(s[i], i);
+                // Will throw exception if there is no special token starting
+                // at i.
+                std::unique_ptr<IToken> token = parseSpecialToken(s, i);
+
+                IValuedToken *valuedToken = dynamic_cast<IValuedToken *>(token.get());
+                if (valuedToken) {
+                    if (valuedToken->canBeMultipliedByConstant()) {
+                        if (lastTokenConstant) {
+                            ret->tokens.push_back(std::make_unique<MultiplyOperatorToken>());
+                        }
+                        canMultiplyLastTokenByConstant = true;
+                    } else if (canMultiplyLastTokenByConstant) {
+                        ret->tokens.push_back(std::make_unique<MultiplyOperatorToken>());
+                        canMultiplyLastTokenByConstant = false;
+                    } else {
+                        canMultiplyLastTokenByConstant = false;
+                    }
+                    lastTokenConstant = true;
+                } else {
+                    canMultiplyLastTokenByConstant = false;
+                    lastTokenConstant = false;
+                }
+                ret->tokens.push_back(std::move(token));
             }
             break;
         }
@@ -86,7 +116,37 @@ std::unique_ptr<ExpressionToken> ExpressionToken::parse(const std::string &s, bo
     }
 }
 
+std::unique_ptr<IToken> ExpressionToken::parseSpecialToken(const std::string &s, int &i) {
+    static const char *tokenNames[7] = {
+        "PI", "SIN", "COS", "TAN", "ASIN", "ACOS", "ATAN",
+    };
+    static const std::unique_ptr<IToken> token[7] = {
+        std::make_unique<PiConstantToken>(),   std::make_unique<SinOperatorToken>(),
+        std::make_unique<CosOperatorToken>(),  std::make_unique<TanOperatorToken>(),
+        std::make_unique<ASinOperatorToken>(), std::make_unique<ACosOperatorToken>(),
+        std::make_unique<ATanOperatorToken>()};
+
+    for (int tokenName = 0; tokenName < 7; tokenName++) {
+        int j;
+        for (j = 0;
+             tokenNames[tokenName][j] && i + j < s.length() && (tokenNames[tokenName][j] == std::toupper(s[i + j]));
+             j++) {
+        }
+        // If end of token name was reached, a valid token was found
+        if (!tokenNames[tokenName][j]) {
+            i += j;
+            return token[tokenName]->clone();
+        }
+    }
+
+    throw ParseException(s[i], i);
+}
+
 std::unique_ptr<ConstantToken> ExpressionToken::evaluate() const {
+    if (tokens.size() == 0) {
+        throw EvaluateException("Could not evaluate empty expression.", 0);
+    }
+
     std::vector<std::unique_ptr<IToken>> tokensCopy;
 
     // Copies tokens to a temp vector. Evaluatable tokens are automatically
@@ -95,6 +155,7 @@ std::unique_ptr<ConstantToken> ExpressionToken::evaluate() const {
         tokensCopy.push_back(token->clone());
     }
 
+    evaluateOperation<IFunctionOperatorToken, IFunctionOperatorToken>(tokensCopy);
     evaluateOperation<PowerOperatorToken, PowerOperatorToken>(tokensCopy);
     evaluateOperation<MultiplyOperatorToken, DivideOperatorToken>(tokensCopy);
     evaluateOperation<AddOperatorToken, SubtractOperatorToken>(tokensCopy);

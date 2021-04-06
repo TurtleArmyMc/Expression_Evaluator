@@ -15,6 +15,7 @@ class ExpressionToken : public IEvaluatableToken {
     static ConstantToken *getNextConstant(std::vector<std::unique_ptr<IToken>>::iterator,
                                           std::vector<std::unique_ptr<IToken>> &);
     static std::unique_ptr<ExpressionToken> parse(const std::string &s);
+    static std::unique_ptr<IToken> parseSpecialToken(const std::string &s, int &i);
     std::unique_ptr<ConstantToken> evaluate() const;
     bool canBeMultipliedByConstant() const;
     std::string toString() const;

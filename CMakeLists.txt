@@ -3,6 +3,6 @@ project(ExpressionEvaluator)
 
 set(CMAKE_CXX_STANDARD 14)
 
-file(GLOB_RECURSE sources src/*.cpp src/*.hpp)
+file(GLOB_RECURSE 1oop_sources src/1.OOP/*.cpp src/1.OOP/*.hpp)
 
-add_executable(ExpressionEvaluator ${sources})
+add_executable(OOPExpressionEvaluator ${1oop_sources})
