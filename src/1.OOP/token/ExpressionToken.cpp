@@ -169,10 +169,10 @@ std::unique_ptr<ConstantToken> ExpressionToken::evaluate() const {
 }
 
 template <class Operation1, class Operation2>
-void ExpressionToken::evaluateOperation(std::vector<std::unique_ptr<IToken>> &tokensCopy) {
+void ExpressionToken::evaluateOperation(std::vector<std::unique_ptr<IToken>> &evaluateTokens) {
     bool lastTokenConstant = false;
 
-    for (auto i = tokensCopy.begin(); i < tokensCopy.end();) {
+    for (auto i = evaluateTokens.begin(); i < evaluateTokens.end();) {
         IOperatorToken *operatorToken = dynamic_cast<Operation1 *>(i->get());
 
         // In the case of the power operator, there is no root operator to be
@@ -190,16 +190,16 @@ void ExpressionToken::evaluateOperation(std::vector<std::unique_ptr<IToken>> &to
 
         // Checks if the current token is one of the operators being evaluated
         if (operatorToken != nullptr) {
-            ConstantToken *a = (i != tokensCopy.begin() ? dynamic_cast<ConstantToken *>((i - 1)->get()) : nullptr);
-            ConstantToken *b = getNextConstant(i + 1, tokensCopy);
+            ConstantToken *a = (i != evaluateTokens.begin() ? dynamic_cast<ConstantToken *>((i - 1)->get()) : nullptr);
+            ConstantToken *b = getNextConstant(i + 1, evaluateTokens);
 
             *i = std::unique_ptr<ConstantToken>(operatorToken->evaluate(a, b));
             lastTokenConstant = true;
             if (b) {
-                tokensCopy.erase(i + 1);
+                evaluateTokens.erase(i + 1);
             }
             if (a) {
-                tokensCopy.erase(i - 1);
+                evaluateTokens.erase(i - 1);
                 continue;
             }
         } else {
@@ -222,19 +222,21 @@ void ExpressionToken::evaluateOperation(std::vector<std::unique_ptr<IToken>> &to
 }
 
 ConstantToken *ExpressionToken::getNextConstant(std::vector<std::unique_ptr<IToken>>::iterator i,
-                                                std::vector<std::unique_ptr<IToken>> &tokensCopy) {
-    if (i < tokensCopy.end()) {
+                                                std::vector<std::unique_ptr<IToken>> &evaluateTokens) {
+    if (i < evaluateTokens.end()) {
         // Check if the current token is a constant and return it if it is.
         ConstantToken *constToken = dynamic_cast<ConstantToken *>(i->get());
         if (constToken != nullptr) {
             return constToken;
         }
 
+        // TODO: allow chaining of trigonometric functions.
+
         // Check if the current token is a sign change token (+ or -) and keep
         // looking for a constant token or more sign change tokens.
         ISignChangeToken *signChangeToken = dynamic_cast<ISignChangeToken *>(i->get());
-        if (signChangeToken != nullptr && i + 1 < tokensCopy.end()) {
-            ConstantToken *nextConst = getNextConstant(i + 1, tokensCopy);
+        if (signChangeToken != nullptr && i + 1 < evaluateTokens.end()) {
+            ConstantToken *nextConst = getNextConstant(i + 1, evaluateTokens);
 
             // Return nullptr if no constant was found after the sign change
             // token.
@@ -246,7 +248,7 @@ ConstantToken *ExpressionToken::getNextConstant(std::vector<std::unique_ptr<ITok
             // the new constant with its sign changed where the sign change
             // token was.
             *i = signChangeToken->changeSign(nextConst);
-            tokensCopy.erase(i + 1);
+            evaluateTokens.erase(i + 1);
 
             // Now guaranteed to point to a ConstantToken
             return static_cast<ConstantToken *>(i->get());
